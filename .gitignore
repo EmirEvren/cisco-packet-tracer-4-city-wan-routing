@@ -1,0 +1,16 @@
+﻿# Operating System Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.BIN/
+.DS_Store
+
+# Cisco Packet Tracer Temp & Autosave Files
+*.tmp
+*.bak
+*.pktsave
+*~
+
+# IDE / Editor Files
+.vscode/
+.idea/

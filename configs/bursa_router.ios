@@ -1,0 +1,89 @@
+! =============================================================================
+! Router: Bursa (Plate 16) - Cisco IOS Configuration
+! Project: Cisco Packet Tracer 4-City Intercity WAN Routing Lab
+! =============================================================================
+
+enable
+configure terminal
+hostname Bursa
+
+! -----------------------------------------------------------------------------
+! WAN / MPLS Backbone Interface
+! -----------------------------------------------------------------------------
+interface GigabitEthernet0/3/0
+ description to MPLS
+ ip address 1.1.1.16 255.255.255.0
+ no shutdown
+ exit
+
+! -----------------------------------------------------------------------------
+! Local Branch LAN Interfaces (Bursa Districts)
+! -----------------------------------------------------------------------------
+! District 1: Osmangazi
+interface GigabitEthernet0/1
+ description to Osmangazi
+ ip address 10.16.1.1 255.255.255.0
+ no shutdown
+ exit
+
+! District 2: Nilufer
+interface GigabitEthernet0/2
+ description to Nilufer
+ ip address 10.16.2.1 255.255.255.0
+ no shutdown
+ exit
+
+! -----------------------------------------------------------------------------
+! Static Routes to Remote City Subnets across MPLS WAN
+! -----------------------------------------------------------------------------
+! Routes to Ankara Subnets (Next-Hop: 1.1.1.6)
+ip route 10.6.1.0 255.255.255.0 1.1.1.6
+ip route 10.6.2.0 255.255.255.0 1.1.1.6
+
+! Routes to Corum Subnets (Next-Hop: 1.1.1.19)
+ip route 10.19.1.0 255.255.255.0 1.1.1.19
+ip route 10.19.2.0 255.255.255.0 1.1.1.19
+
+! Routes to Rize Subnets (Next-Hop: 1.1.1.53)
+ip route 10.53.1.0 255.255.255.0 1.1.1.53
+ip route 10.53.2.0 255.255.255.0 1.1.1.53
+
+! -----------------------------------------------------------------------------
+! Device Security & Remote Management (SSH v2 & Telnet)
+! -----------------------------------------------------------------------------
+no ip domain lookup
+enable secret cisco
+ip domain-name cisco
+service password-encryption
+
+! Generate 1024-bit RSA key for SSH
+crypto key generate rsa
+1024
+
+! Local Users with Privilege Levels
+username admin privilege 15 secret admin
+username user privilege 1 secret user
+
+! Virtual Terminal Lines Configuration (SSH & Telnet)
+line vty 0 4
+ logging synchronous
+ login local
+ transport input all
+ exit
+
+! SSH Hardening Parameters
+ip ssh version 2
+ip ssh authentication-retries 4
+ip ssh time-out 30
+
+! Console Port Configuration
+line console 0
+ logging synchronous
+ login local
+ exit
+
+! -----------------------------------------------------------------------------
+! Save Configuration
+! -----------------------------------------------------------------------------
+end
+write memory
