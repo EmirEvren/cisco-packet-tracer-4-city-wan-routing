@@ -6,218 +6,276 @@
 [![Network Architecture](https://img.shields.io/badge/Architecture-MPLS%20WAN%20%2B%208%20LANs-success?style=flat-square)]()
 [![Security](https://img.shields.io/badge/Security-SSHv2%20%7C%20Role--Based%20Privileges-orange?style=flat-square)]()
 
-A hands-on enterprise networking laboratory designed, implemented, and verified in **Cisco Packet Tracer**. This project demonstrates a multi-regional WAN architecture connecting **4 major cities** across Turkey (**Ankara**, **Bursa**, **Corum**, and **Rize**) through a central Layer 3 MPLS WAN backbone, incorporating **deterministic static routing**, **dual remote access management (SSH v2 & Telnet)**, and **hardened device security**.
+A hands-on enterprise networking laboratory designed, implemented, and verified in **Cisco Packet Tracer**. This project demonstrates a multi-regional WAN architecture connecting **4 major cities** across Turkey (**Ankara**, **Bursa**, **Çorum**, and **Rize**) through a central Layer 3 MPLS WAN backbone, incorporating **deterministic static routing**, **dual remote access management (SSH v2 & Telnet)**, and **hardened device security**.
+
+---
+
+## Quick Reference (At a Glance)
+
+| City | Plate | Border Router | WAN IP (`Gig0/3/0`) | District LAN 1 (`Gig0/1`) | District LAN 2 (`Gig0/2`) | Remote Management |
+| :--- | :---: | :--- | :--- | :--- | :--- | :--- |
+| **Ankara** | `06` | `Ankara` | `1.1.1.6/24` | Sincan (`10.6.1.0/24`) | Çankaya (`10.6.2.0/24`) | SSHv2 & Telnet (`admin`/`user`) |
+| **Bursa** | `16` | `Bursa` | `1.1.1.16/24` | Osmangazi (`10.16.1.0/24`) | Nilüfer (`10.16.2.0/24`) | SSHv2 & Telnet (`admin`/`user`) |
+| **Çorum** | `19` | `Corum` | `1.1.1.19/24` | Alaca (`10.19.1.0/24`) | İskilip (`10.19.2.0/24`) | SSHv2 & Telnet (`admin`/`user`) |
+| **Rize** | `53` | `Rize` | `1.1.1.53/24` | Pazar (`10.53.1.0/24`) | İkizdere (`10.53.2.0/24`) | SSHv2 & Telnet (`admin`/`user`) |
 
 ---
 
 ## Table of Contents
 
-- [Project Overview](#project-overview)
 - [Network Topology](#network-topology)
-- [IP Addressing Scheme](#ip-addressing-scheme)
-- [Static Routing Architecture](#static-routing-architecture)
-- [Device Hardening & Remote Management](#device-hardening--remote-management)
+  - [1. Visual Topology Diagram](#1-visual-topology-diagram)
+  - [2. ASCII Architecture Schematic](#2-ascii-architecture-schematic)
+  - [3. Interactive Mermaid Topology](#3-interactive-mermaid-topology)
+- [IP Addressing Plan](#ip-addressing-plan)
+- [Static Routing Architecture & Matrix](#static-routing-architecture--matrix)
+  - [Cross-City Routing Matrix](#cross-city-routing-matrix)
+  - [Detailed Router Routing Tables](#detailed-router-routing-tables)
+- [Device Hardening & Security Architecture](#device-hardening--security-architecture)
 - [Cisco IOS Configuration Walkthrough](#cisco-ios-configuration-walkthrough)
-  - [1. Ankara Router (06)](#1-ankara-router-06)
-  - [2. Corum Router (19)](#2-corum-router-19)
-  - [3. Rize Router (53)](#3-rize-router-53)
-  - [4. Bursa Router (16)](#4-bursa-router-16)
-- [Verification and Diagnostics](#verification-and-diagnostics)
+- [Verification & Diagnostics Guide](#verification--diagnostics-guide)
 - [Repository Structure](#repository-structure)
 - [Instructions for Running the Lab](#instructions-for-running-the-lab)
 - [Author & License](#author--license)
 
 ---
 
-## Project Overview
-
-In enterprise and government network topologies, branch offices and metropolitan regional centers communicate over high-capacity Wide Area Network (WAN) backbones. This laboratory implements a scalable intercity network model:
-
-- **Central MPLS WAN Backbone (`1.1.1.0/24`)**: Interconnects all regional border routers through dedicated Gigabit interfaces (`Gig0/3/0`), using city license plate codes as host addresses for clear addressing logic (`1.1.1.6` for Ankara, `1.1.1.16` for Bursa, `1.1.1.19` for Corum, and `1.1.1.53` for Rize).
-- **8 Distinct Metropolitan LAN Subnets**: Each regional router hosts two local district LANs with dedicated `/24` subnets (e.g., Sincan & Cankaya in Ankara, Osmangazi & Nilufer in Bursa, Alaca & Iskilip in Corum, Pazar & Ikizdere in Rize).
-- **Deterministic Static Routing**: Every router maintains explicit next-hop paths to reach all 6 remote branch subnets across the MPLS backbone, eliminating routing protocol overhead while guaranteeing deterministic traffic engineering.
-- **Enterprise Device Hardening**:
-  - **SSH Version 2** enabled with 1024-bit RSA cryptokeys for encrypted administrative access.
-  - **Fallback Telnet & SSH** supported on VTY lines (`transport input all`).
-  - **Role-Based Privilege Separation**: Full administrative privileges (Privilege 15) for `admin` and restricted user privileges (Privilege 1) for standard operations.
-  - **Password Encryption**: Cisco type-7 password encryption (`service password-encryption`) and MD5/SHA secret hashing (`enable secret`).
-  - **Console & VTY Synchronous Logging**: Prevents unsolicited system messages from interrupting active CLI typing.
-  - **DNS Lookup Suppression**: Disables domain name resolution (`no ip domain lookup`) to prevent CLI freezing on mis-typed commands.
-
----
-
 ## Network Topology
 
+### 1. Visual Topology Diagram
+
+<div align="center">
+  <img src="topologies/network_topology.svg" alt="4-City Intercity Enterprise WAN Topology" width="100%" />
+</div>
+
+<br/>
+
+### 2. ASCII Architecture Schematic
+
+```text
+=============================================================================================================
+                                        CENTRAL MPLS WAN BACKBONE
+                                                1.1.1.0/24
+=============================================================================================================
+         |                                  |                                  |                            |
+         | Gig0/3/0                         | Gig0/3/0                         | Gig0/3/0                   | Gig0/3/0
+         | IP: 1.1.1.6/24                   | IP: 1.1.1.16/24                  | IP: 1.1.1.19/24            | IP: 1.1.1.53/24
+         v                                  v                                  v                            v
++------------------+              +------------------+               +------------------+         +------------------+
+|   ANKARA (06)    |              |    BURSA (16)    |               |    ÇORUM (19)    |         |    RİZE (53)     |
+| Router: Ankara   |              | Router: Bursa    |               | Router: Corum    |         | Router: Rize     |
++------------------+              +------------------+               +------------------+         +------------------+
+   |            |                    |            |                     |            |               |            |
+   | Gig0/1     | Gig0/2             | Gig0/1     | Gig0/2              | Gig0/1     | Gig0/2        | Gig0/1     | Gig0/2
+   | 10.6.1.1   | 10.6.2.1           | 10.16.1.1  | 10.16.2.1           | 10.19.1.1  | 10.19.2.1     | 10.53.1.1  | 10.53.2.1
+   v            v                    v            v                     v            v               v            v
++------------+ +------------+     +------------+ +------------+      +------------+ +------------+ +------------+ +------------+
+|   SİNCAN   | |  ÇANKAYA   |     | OSMANGAZİ  | |  NİLÜFER   |      |   ALACA    | |  İSKİLİP   | |   PAZAR    | |  İKİZDERE  |
+| 10.6.1.0/24| | 10.6.2.0/24|     |10.16.1.0/24| |10.16.2.0/24|      |10.19.1.0/24| |10.19.2.0/24| |10.53.1.0/24| |10.53.2.0/24|
++------------+ +------------+     +------------+ +------------+      +------------+ +------------+ +------------+ +------------+
+```
+
+<br/>
+
+### 3. Interactive Mermaid Topology
+
 ```mermaid
-flowchart TB
-    subgraph MPLS_Backbone [Central MPLS WAN Backbone: 1.1.1.0/24]
-        MPLS_CLOUD[MPLS Cloud / Central WAN Switch]
+graph TD
+    classDef cloud fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc,font-weight:bold;
+    classDef router fill:#1e293b,stroke:#0284c7,stroke-width:2px,color:#f8fafc,font-weight:bold;
+    classDef lan fill:#020617,stroke:#475569,stroke-width:1px,color:#cbd5e1;
+
+    WAN(("☁️ Central MPLS Backbone<br/>1.1.1.0/24")):::cloud
+
+    subgraph ANK ["🏛️ Ankara Region (Plate 06)"]
+        R_ANK["Router: Ankara<br/>WAN IP: 1.1.1.6"]:::router
+        LAN_SIN["🏢 Sincan LAN<br/>10.6.1.0/24 (GW: 10.6.1.1)"]:::lan
+        LAN_CAN["🏢 Çankaya LAN<br/>10.6.2.0/24 (GW: 10.6.2.1)"]:::lan
+        R_ANK ---|"Gig0/1"| LAN_SIN
+        R_ANK ---|"Gig0/2"| LAN_CAN
     end
 
-    subgraph Ankara_Region [Region: Ankara - Plate 06]
-        R_ANK[Router: Ankara<br/>WAN IP: 1.1.1.6]
-        ANK_SW1[Switch: Sincan] ---|"Gig0/1 (10.6.1.1/24)"| R_ANK
-        ANK_SW2[Switch: Cankaya] ---|"Gig0/2 (10.6.2.1/24)"| R_ANK
-        ANK_HOST1[Hosts: Sincan LAN<br/>10.6.1.0/24] --- ANK_SW1
-        ANK_HOST2[Hosts: Cankaya LAN<br/>10.6.2.0/24] --- ANK_SW2
+    subgraph BUR ["🏛️ Bursa Region (Plate 16)"]
+        R_BUR["Router: Bursa<br/>WAN IP: 1.1.1.16"]:::router
+        LAN_OSM["🏢 Osmangazi LAN<br/>10.16.1.0/24 (GW: 10.16.1.1)"]:::lan
+        LAN_NIL["🏢 Nilüfer LAN<br/>10.16.2.0/24 (GW: 10.16.2.1)"]:::lan
+        R_BUR ---|"Gig0/1"| LAN_OSM
+        R_BUR ---|"Gig0/2"| LAN_NIL
     end
 
-    subgraph Bursa_Region [Region: Bursa - Plate 16]
-        R_BUR[Router: Bursa<br/>WAN IP: 1.1.1.16]
-        BUR_SW1[Switch: Osmangazi] ---|"Gig0/1 (10.16.1.1/24)"| R_BUR
-        BUR_SW2[Switch: Nilufer] ---|"Gig0/2 (10.16.2.1/24)"| R_BUR
-        BUR_HOST1[Hosts: Osmangazi LAN<br/>10.16.1.0/24] --- BUR_SW1
-        BUR_HOST2[Hosts: Nilufer LAN<br/>10.16.2.0/24] --- BUR_SW2
+    subgraph COR ["🏛️ Çorum Region (Plate 19)"]
+        R_COR["Router: Corum<br/>WAN IP: 1.1.1.19"]:::router
+        LAN_ALA["🏢 Alaca LAN<br/>10.19.1.0/24 (GW: 10.19.1.1)"]:::lan
+        LAN_ISK["🏢 İskilip LAN<br/>10.19.2.0/24 (GW: 10.19.2.1)"]:::lan
+        R_COR ---|"Gig0/1"| LAN_ALA
+        R_COR ---|"Gig0/2"| LAN_ISK
     end
 
-    subgraph Corum_Region [Region: Corum - Plate 19]
-        R_COR[Router: Corum<br/>WAN IP: 1.1.1.19]
-        COR_SW1[Switch: Alaca] ---|"Gig0/1 (10.19.1.1/24)"| R_COR
-        COR_SW2[Switch: Iskilip] ---|"Gig0/2 (10.19.2.1/24)"| R_COR
-        COR_HOST1[Hosts: Alaca LAN<br/>10.19.1.0/24] --- COR_SW1
-        COR_HOST2[Hosts: Iskilip LAN<br/>10.19.2.0/24] --- COR_SW2
+    subgraph RIZ ["🏛️ Rize Region (Plate 53)"]
+        R_RIZ["Router: Rize<br/>WAN IP: 1.1.1.53"]:::router
+        LAN_PAZ["🏢 Pazar LAN<br/>10.53.1.0/24 (GW: 10.53.1.1)"]:::lan
+        LAN_IKI["🏢 İkizdere LAN<br/>10.53.2.0/24 (GW: 10.53.2.1)"]:::lan
+        R_RIZ ---|"Gig0/1"| LAN_PAZ
+        R_RIZ ---|"Gig0/2"| LAN_IKI
     end
 
-    subgraph Rize_Region [Region: Rize - Plate 53]
-        R_RIZ[Router: Rize<br/>WAN IP: 1.1.1.53]
-        RIZ_SW1[Switch: Pazar] ---|"Gig0/1 (10.53.1.1/24)"| R_RIZ
-        RIZ_SW2[Switch: Ikizdere] ---|"Gig0/2 (10.53.2.1/24)"| R_RIZ
-        RIZ_HOST1[Hosts: Pazar LAN<br/>10.53.1.0/24] --- RIZ_SW1
-        RIZ_HOST2[Hosts: Ikizdere LAN<br/>10.53.2.0/24] --- RIZ_SW2
-    end
-
-    MPLS_CLOUD ===|"Gig0/3/0 (1.1.1.6)"| R_ANK
-    MPLS_CLOUD ===|"Gig0/3/0 (1.1.1.16)"| R_BUR
-    MPLS_CLOUD ===|"Gig0/3/0 (1.1.1.19)"| R_COR
-    MPLS_CLOUD ===|"Gig0/3/0 (1.1.1.53)"| R_RIZ
+    WAN ===|"Gig0/3/0 (1.1.1.6)"| R_ANK
+    WAN ===|"Gig0/3/0 (1.1.1.16)"| R_BUR
+    WAN ===|"Gig0/3/0 (1.1.1.19)"| R_COR
+    WAN ===|"Gig0/3/0 (1.1.1.53)"| R_RIZ
 ```
 
 ---
 
-## IP Addressing Scheme
+## IP Addressing Plan
 
-The addressing plan uses hierarchical subnetting where each regional network identifier reflects the Turkish provincial traffic license plate code:
+The addressing scheme is designed hierarchically around Turkish provincial traffic license plate numbers, ensuring clean subnet tracking and intuitive troubleshooting:
 
-| Device / Location | Interface | IP Address | Subnet Mask | CIDR | Purpose / Role | Connected Segment |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **MPLS Backbone** | `WAN Cloud` | `1.1.1.0` | `255.255.255.0` | `/24` | Central WAN Interconnect | All 4 Routers (`Gig0/3/0`) |
-| **Ankara Router** | `Gig0/3/0` | `1.1.1.6` | `255.255.255.0` | `/24` | WAN Backbone Uplink | MPLS Cloud |
-| **Ankara Router** | `Gig0/1` | `10.6.1.1` | `255.255.255.0` | `/24` | Default Gateway (Sincan) | Sincan District LAN |
-| **Ankara Router** | `Gig0/2` | `10.6.2.1` | `255.255.255.0` | `/24` | Default Gateway (Cankaya) | Cankaya District LAN |
-| **Bursa Router** | `Gig0/3/0` | `1.1.1.16` | `255.255.255.0` | `/24` | WAN Backbone Uplink | MPLS Cloud |
-| **Bursa Router** | `Gig0/1` | `10.16.1.1` | `255.255.255.0` | `/24` | Default Gateway (Osmangazi) | Osmangazi District LAN |
-| **Bursa Router** | `Gig0/2` | `10.16.2.1` | `255.255.255.0` | `/24` | Default Gateway (Nilufer) | Nilufer District LAN |
-| **Corum Router** | `Gig0/3/0` | `1.1.1.19` | `255.255.255.0` | `/24` | WAN Backbone Uplink | MPLS Cloud |
-| **Corum Router** | `Gig0/1` | `10.19.1.1` | `255.255.255.0` | `/24` | Default Gateway (Alaca) | Alaca District LAN |
-| **Corum Router** | `Gig0/2` | `10.19.2.1` | `255.255.255.0` | `/24` | Default Gateway (Iskilip) | Iskilip District LAN |
-| **Rize Router** | `Gig0/3/0` | `1.1.1.53` | `255.255.255.0` | `/24` | WAN Backbone Uplink | MPLS Cloud |
-| **Rize Router** | `Gig0/1` | `10.53.1.1` | `255.255.255.0` | `/24` | Default Gateway (Pazar) | Pazar District LAN |
-| **Rize Router** | `Gig0/2` | `10.53.2.1` | `255.255.255.0` | `/24` | Default Gateway (Ikizdere) | Ikizdere District LAN |
+### 1. WAN Interconnect Subnet
+| Segment | Subnet Address | Mask | CIDR | Usable IP Range | Purpose |
+| :--- | :--- | :--- | :---: | :--- | :--- |
+| **MPLS WAN Backbone** | `1.1.1.0` | `255.255.255.0` | `/24` | `1.1.1.1 - 1.1.1.254` | Common Layer 3 transit broadcast domain connecting all 4 city routers |
 
----
-
-## Static Routing Architecture
-
-Each regional router is configured with **6 static route entries** pointing to the remote regional gateways across the WAN:
-
-### 1. Ankara Router Routing Table
-| Destination Subnet | Subnet Mask | Next-Hop IP | Outgoing Interface | Destination Location |
-| :--- | :--- | :--- | :--- | :--- |
-| `10.19.1.0` | `255.255.255.0` | `1.1.1.19` | `GigabitEthernet0/3/0` | Corum - Alaca |
-| `10.19.2.0` | `255.255.255.0` | `1.1.1.19` | `GigabitEthernet0/3/0` | Corum - Iskilip |
-| `10.53.1.0` | `255.255.255.0` | `1.1.1.53` | `GigabitEthernet0/3/0` | Rize - Pazar |
-| `10.53.2.0` | `255.255.255.0` | `1.1.1.53` | `GigabitEthernet0/3/0` | Rize - Ikizdere |
-| `10.16.1.0` | `255.255.255.0` | `1.1.1.16` | `GigabitEthernet0/3/0` | Bursa - Osmangazi |
-| `10.16.2.0` | `255.255.255.0` | `1.1.1.16` | `GigabitEthernet0/3/0` | Bursa - Nilufer |
-
-### 2. Corum Router Routing Table
-| Destination Subnet | Subnet Mask | Next-Hop IP | Outgoing Interface | Destination Location |
-| :--- | :--- | :--- | :--- | :--- |
-| `10.6.1.0` | `255.255.255.0` | `1.1.1.6` | `GigabitEthernet0/3/0` | Ankara - Sincan |
-| `10.6.2.0` | `255.255.255.0` | `1.1.1.6` | `GigabitEthernet0/3/0` | Ankara - Cankaya |
-| `10.53.1.0` | `255.255.255.0` | `1.1.1.53` | `GigabitEthernet0/3/0` | Rize - Pazar |
-| `10.53.2.0` | `255.255.255.0` | `1.1.1.53` | `GigabitEthernet0/3/0` | Rize - Ikizdere |
-| `10.16.1.0` | `255.255.255.0` | `1.1.1.16` | `GigabitEthernet0/3/0` | Bursa - Osmangazi |
-| `10.16.2.0` | `255.255.255.0` | `1.1.1.16` | `GigabitEthernet0/3/0` | Bursa - Nilufer |
-
-### 3. Rize Router Routing Table
-| Destination Subnet | Subnet Mask | Next-Hop IP | Outgoing Interface | Destination Location |
-| :--- | :--- | :--- | :--- | :--- |
-| `10.6.1.0` | `255.255.255.0` | `1.1.1.6` | `GigabitEthernet0/3/0` | Ankara - Sincan |
-| `10.6.2.0` | `255.255.255.0` | `1.1.1.6` | `GigabitEthernet0/3/0` | Ankara - Cankaya |
-| `10.19.1.0` | `255.255.255.0` | `1.1.1.19` | `GigabitEthernet0/3/0` | Corum - Alaca |
-| `10.19.2.0` | `255.255.255.0` | `1.1.1.19` | `GigabitEthernet0/3/0` | Corum - Iskilip |
-| `10.16.1.0` | `255.255.255.0` | `1.1.1.16` | `GigabitEthernet0/3/0` | Bursa - Osmangazi |
-| `10.16.2.0` | `255.255.255.0` | `1.1.1.16` | `GigabitEthernet0/3/0` | Bursa - Nilufer |
-
-### 4. Bursa Router Routing Table
-| Destination Subnet | Subnet Mask | Next-Hop IP | Outgoing Interface | Destination Location |
-| :--- | :--- | :--- | :--- | :--- |
-| `10.6.1.0` | `255.255.255.0` | `1.1.1.6` | `GigabitEthernet0/3/0` | Ankara - Sincan |
-| `10.6.2.0` | `255.255.255.0` | `1.1.1.6` | `GigabitEthernet0/3/0` | Ankara - Cankaya |
-| `10.19.1.0` | `255.255.255.0` | `1.1.1.19` | `GigabitEthernet0/3/0` | Corum - Alaca |
-| `10.19.2.0` | `255.255.255.0` | `1.1.1.19` | `GigabitEthernet0/3/0` | Corum - Iskilip |
-| `10.53.1.0` | `255.255.255.0` | `1.1.1.53` | `GigabitEthernet0/3/0` | Rize - Pazar |
-| `10.53.2.0` | `255.255.255.0` | `1.1.1.53` | `GigabitEthernet0/3/0` | Rize - Ikizdere |
+### 2. Detailed Device Interface Addressing
+| Device / Hostname | Interface | IP Address | Subnet Mask | Description | Role / Target Segment |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Ankara Router** | `Gig0/3/0` | `1.1.1.6` | `255.255.255.0` | `to MPLS` | WAN Backbone Uplink Interface |
+| **Ankara Router** | `Gig0/1` | `10.6.1.1` | `255.255.255.0` | `to Sincan` | Default Gateway for Sincan District LAN |
+| **Ankara Router** | `Gig0/2` | `10.6.2.1` | `255.255.255.0` | `to Cankaya` | Default Gateway for Çankaya District LAN |
+| **Bursa Router** | `Gig0/3/0` | `1.1.1.16` | `255.255.255.0` | `to MPLS` | WAN Backbone Uplink Interface |
+| **Bursa Router** | `Gig0/1` | `10.16.1.1` | `255.255.255.0` | `to Osmangazi` | Default Gateway for Osmangazi District LAN |
+| **Bursa Router** | `Gig0/2` | `10.16.2.1` | `255.255.255.0` | `to Nilufer` | Default Gateway for Nilüfer District LAN |
+| **Çorum Router** | `Gig0/3/0` | `1.1.1.19` | `255.255.255.0` | `to MPLS` | WAN Backbone Uplink Interface |
+| **Çorum Router** | `Gig0/1` | `10.19.1.1` | `255.255.255.0` | `to Alaca` | Default Gateway for Alaca District LAN |
+| **Çorum Router** | `Gig0/2` | `10.19.2.1` | `255.255.255.0` | `to Iskilip` | Default Gateway for İskilip District LAN |
+| **Rize Router** | `Gig0/3/0` | `1.1.1.53` | `255.255.255.0` | `to MPLS` | WAN Backbone Uplink Interface |
+| **Rize Router** | `Gig0/1` | `10.53.1.1` | `255.255.255.0` | `to Pazar` | Default Gateway for Pazar District LAN |
+| **Rize Router** | `Gig0/2` | `10.53.2.1` | `255.255.255.0` | `to Ikizdere` | Default Gateway for İkizdere District LAN |
 
 ---
 
-## Device Hardening & Remote Management
+## Static Routing Architecture & Matrix
 
-All 4 routers feature identical baseline security configurations adhering to Cisco network hardening standards:
+### Cross-City Routing Matrix
 
-1. **Cryptographic Key Generation**:
-   ```cisco
-   ip domain-name cisco
-   crypto key generate rsa
-   1024
-   ```
-2. **SSH Hardening**:
-   ```cisco
-   ip ssh version 2
-   ip ssh authentication-retries 4
-   ip ssh time-out 30
-   ```
-3. **Role-Based Accounts & Privileges**:
-   - `admin` (Privilege 15 -- Full privileged EXEC access)
-   - `user` (Privilege 1 -- Standard unprivileged user EXEC mode)
-4. **VTY & Console Access**:
-   - `transport input all` allows both SSH (secure) and Telnet management sessions.
-   - `login local` enforces local database credential checks.
-   - `logging synchronous` keeps unsolicited status messages from breaking active command entries.
+This matrix provides a quick-lookup view of next-hop gateway resolution between all 4 regional centers:
+
+| Source Router | To Ankara Subnets<br/>(`10.6.1.0/24`, `10.6.2.0/24`) | To Bursa Subnets<br/>(`10.16.1.0/24`, `10.16.2.0/24`) | To Çorum Subnets<br/>(`10.19.1.0/24`, `10.19.2.0/24`) | To Rize Subnets<br/>(`10.53.1.0/24`, `10.53.2.0/24`) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Ankara (06)** | 🟢 *Directly Connected* | Next-Hop: `1.1.1.16` | Next-Hop: `1.1.1.19` | Next-Hop: `1.1.1.53` |
+| **Bursa (16)** | Next-Hop: `1.1.1.6` | 🟢 *Directly Connected* | Next-Hop: `1.1.1.19` | Next-Hop: `1.1.1.53` |
+| **Çorum (19)** | Next-Hop: `1.1.1.6` | Next-Hop: `1.1.1.16` | 🟢 *Directly Connected* | Next-Hop: `1.1.1.53` |
+| **Rize (53)** | Next-Hop: `1.1.1.6` | Next-Hop: `1.1.1.16` | Next-Hop: `1.1.1.19` | 🟢 *Directly Connected* |
+
+---
+
+### Detailed Router Routing Tables
+
+<details open>
+<summary><b>1. Ankara Router (06) Static Routes</b></summary>
+
+| Destination Network | Subnet Mask | Next-Hop IP | Exit Interface | Destination City & District |
+| :--- | :--- | :--- | :--- | :--- |
+| `10.19.1.0` | `255.255.255.0` | `1.1.1.19` | `Gig0/3/0` | Çorum — Alaca |
+| `10.19.2.0` | `255.255.255.0` | `1.1.1.19` | `Gig0/3/0` | Çorum — İskilip |
+| `10.53.1.0` | `255.255.255.0` | `1.1.1.53` | `Gig0/3/0` | Rize — Pazar |
+| `10.53.2.0` | `255.255.255.0` | `1.1.1.53` | `Gig0/3/0` | Rize — İkizdere |
+| `10.16.1.0` | `255.255.255.0` | `1.1.1.16` | `Gig0/3/0` | Bursa — Osmangazi |
+| `10.16.2.0` | `255.255.255.0` | `1.1.1.16` | `Gig0/3/0` | Bursa — Nilüfer |
+
+</details>
+
+<details>
+<summary><b>2. Bursa Router (16) Static Routes</b></summary>
+
+| Destination Network | Subnet Mask | Next-Hop IP | Exit Interface | Destination City & District |
+| :--- | :--- | :--- | :--- | :--- |
+| `10.6.1.0` | `255.255.255.0` | `1.1.1.6` | `Gig0/3/0` | Ankara — Sincan |
+| `10.6.2.0` | `255.255.255.0` | `1.1.1.6` | `Gig0/3/0` | Ankara — Çankaya |
+| `10.19.1.0` | `255.255.255.0` | `1.1.1.19` | `Gig0/3/0` | Çorum — Alaca |
+| `10.19.2.0` | `255.255.255.0` | `1.1.1.19` | `Gig0/3/0` | Çorum — İskilip |
+| `10.53.1.0` | `255.255.255.0` | `1.1.1.53` | `Gig0/3/0` | Rize — Pazar |
+| `10.53.2.0` | `255.255.255.0` | `1.1.1.53` | `Gig0/3/0` | Rize — İkizdere |
+
+</details>
+
+<details>
+<summary><b>3. Çorum Router (19) Static Routes</b></summary>
+
+| Destination Network | Subnet Mask | Next-Hop IP | Exit Interface | Destination City & District |
+| :--- | :--- | :--- | :--- | :--- |
+| `10.6.1.0` | `255.255.255.0` | `1.1.1.6` | `Gig0/3/0` | Ankara — Sincan |
+| `10.6.2.0` | `255.255.255.0` | `1.1.1.6` | `Gig0/3/0` | Ankara — Çankaya |
+| `10.53.1.0` | `255.255.255.0` | `1.1.1.53` | `Gig0/3/0` | Rize — Pazar |
+| `10.53.2.0` | `255.255.255.0` | `1.1.1.53` | `Gig0/3/0` | Rize — İkizdere |
+| `10.16.1.0` | `255.255.255.0` | `1.1.1.16` | `Gig0/3/0` | Bursa — Osmangazi |
+| `10.16.2.0` | `255.255.255.0` | `1.1.1.16` | `Gig0/3/0` | Bursa — Nilüfer |
+
+</details>
+
+<details>
+<summary><b>4. Rize Router (53) Static Routes</b></summary>
+
+| Destination Network | Subnet Mask | Next-Hop IP | Exit Interface | Destination City & District |
+| :--- | :--- | :--- | :--- | :--- |
+| `10.6.1.0` | `255.255.255.0` | `1.1.1.6` | `Gig0/3/0` | Ankara — Sincan |
+| `10.6.2.0` | `255.255.255.0` | `1.1.1.6` | `Gig0/3/0` | Ankara — Çankaya |
+| `10.19.1.0` | `255.255.255.0` | `1.1.1.19` | `Gig0/3/0` | Çorum — Alaca |
+| `10.19.2.0` | `255.255.255.0` | `1.1.1.19` | `Gig0/3/0` | Çorum — İskilip |
+| `10.16.1.0` | `255.255.255.0` | `1.1.1.16` | `Gig0/3/0` | Bursa — Osmangazi |
+| `10.16.2.0` | `255.255.255.0` | `1.1.1.16` | `Gig0/3/0` | Bursa — Nilüfer |
+
+</details>
+
+---
+
+## Device Hardening & Security Architecture
+
+All routers are hardened according to standard enterprise device management guidelines:
+
+| Security Domain | Applied Configuration | Security Rationale |
+| :--- | :--- | :--- |
+| **SSH Version 2** | `ip ssh version 2` | Prevents SSHv1 cipher downgrade attacks |
+| **RSA Key Cryptography** | `crypto key generate rsa` (1024-bit modulus) | Ensures strong asymmetric key exchange for SSH sessions |
+| **Role-Based Privileges** | `username admin privilege 15`<br/>`username user privilege 1` | Separates unrestricted administrative tasks from read-only operations |
+| **Credential Encryption** | `service password-encryption`<br/>`enable secret cisco` | Hashes privileged EXEC passwords and obfuscates plain text passwords |
+| **VTY Transport Flexibility** | `line vty 0 4`<br/>`transport input all` | Allows encrypted SSH access alongside fallback Telnet support |
+| **Terminal Stability** | `logging synchronous` (Console & VTY) | Eliminates prompt distortion caused by asynchronous syslog messages |
+| **Lookup Suppression** | `no ip domain lookup` | Disables DNS broadcast delay when mistyping CLI commands |
 
 ---
 
 ## Cisco IOS Configuration Walkthrough
 
-### 1. Ankara Router (06)
+<details open>
+<summary><b>Router 1: Ankara (06)</b></summary>
+
 ```cisco
 enable
 configure terminal
 hostname Ankara
 
-! MPLS WAN Interface
+! --- MPLS WAN Uplink ---
 interface GigabitEthernet0/3/0
  description to MPLS
  ip address 1.1.1.6 255.255.255.0
  no shutdown
  exit
 
-! Sincan LAN Gateway
+! --- District LAN Gateways ---
 interface GigabitEthernet0/1
  description to Sincan
  ip address 10.6.1.1 255.255.255.0
  no shutdown
  exit
 
-! Cankaya LAN Gateway
 interface GigabitEthernet0/2
  description to Cankaya
  ip address 10.6.2.1 255.255.255.0
  no shutdown
  exit
 
-! Static Routes
+! --- Static Route Entries ---
 ip route 10.19.1.0 255.255.255.0 1.1.1.19
 ip route 10.19.2.0 255.255.255.0 1.1.1.19
 ip route 10.53.1.0 255.255.255.0 1.1.1.53
@@ -225,7 +283,7 @@ ip route 10.53.2.0 255.255.255.0 1.1.1.53
 ip route 10.16.1.0 255.255.255.0 1.1.1.16
 ip route 10.16.2.0 255.255.255.0 1.1.1.16
 
-! Security & Management
+! --- Management & Hardening ---
 no ip domain lookup
 enable secret cisco
 ip domain-name cisco
@@ -250,154 +308,37 @@ end
 write memory
 ```
 
-### 2. Corum Router (19)
-```cisco
-enable
-configure terminal
-hostname Corum
+</details>
 
-! MPLS WAN Interface
-interface GigabitEthernet0/3/0
- description to MPLS
- ip address 1.1.1.19 255.255.255.0
- no shutdown
- exit
+<details>
+<summary><b>Router 2: Bursa (16)</b></summary>
 
-! Alaca LAN Gateway
-interface GigabitEthernet0/1
- description to Alaca
- ip address 10.19.1.1 255.255.255.0
- no shutdown
- exit
-
-! Iskilip LAN Gateway
-interface GigabitEthernet0/2
- description to Iskilip
- ip address 10.19.2.1 255.255.255.0
- no shutdown
- exit
-
-! Static Routes
-ip route 10.6.1.0 255.255.255.0 1.1.1.6
-ip route 10.6.2.0 255.255.255.0 1.1.1.6
-ip route 10.53.1.0 255.255.255.0 1.1.1.53
-ip route 10.53.2.0 255.255.255.0 1.1.1.53
-ip route 10.16.1.0 255.255.255.0 1.1.1.16
-ip route 10.16.2.0 255.255.255.0 1.1.1.16
-
-! Security & Management
-no ip domain lookup
-enable secret cisco
-ip domain-name cisco
-service password-encryption
-crypto key generate rsa
-1024
-username admin privilege 15 secret admin
-username user privilege 1 secret user
-line vty 0 4
- logging synchronous
- login local
- transport input all
- exit
-ip ssh version 2
-ip ssh authentication-retries 4
-ip ssh time-out 30
-line console 0
- logging synchronous
- login local
- exit
-end
-write memory
-```
-
-### 3. Rize Router (53)
-```cisco
-enable
-configure terminal
-hostname Rize
-
-! MPLS WAN Interface
-interface GigabitEthernet0/3/0
- description to MPLS
- ip address 1.1.1.53 255.255.255.0
- no shutdown
- exit
-
-! Pazar LAN Gateway
-interface GigabitEthernet0/1
- description to Pazar
- ip address 10.53.1.1 255.255.255.0
- no shutdown
- exit
-
-! Ikizdere LAN Gateway
-interface GigabitEthernet0/2
- description to Ikizdere
- ip address 10.53.2.1 255.255.255.0
- no shutdown
- exit
-
-! Static Routes
-ip route 10.6.1.0 255.255.255.0 1.1.1.6
-ip route 10.6.2.0 255.255.255.0 1.1.1.6
-ip route 10.19.1.0 255.255.255.0 1.1.1.19
-ip route 10.19.2.0 255.255.255.0 1.1.1.19
-ip route 10.16.1.0 255.255.255.0 1.1.1.16
-ip route 10.16.2.0 255.255.255.0 1.1.1.16
-
-! Security & Management
-no ip domain lookup
-enable secret cisco
-ip domain-name cisco
-service password-encryption
-crypto key generate rsa
-1024
-username admin privilege 15 secret admin
-username user privilege 1 secret user
-line vty 0 4
- logging synchronous
- login local
- transport input all
- exit
-ip ssh version 2
-ip ssh authentication-retries 4
-ip ssh time-out 30
-line console 0
- logging synchronous
- login local
- exit
-end
-write memory
-```
-
-### 4. Bursa Router (16)
 ```cisco
 enable
 configure terminal
 hostname Bursa
 
-! MPLS WAN Interface
+! --- MPLS WAN Uplink ---
 interface GigabitEthernet0/3/0
  description to MPLS
  ip address 1.1.1.16 255.255.255.0
  no shutdown
  exit
 
-! Osmangazi LAN Gateway
+! --- District LAN Gateways ---
 interface GigabitEthernet0/1
  description to Osmangazi
  ip address 10.16.1.1 255.255.255.0
  no shutdown
  exit
 
-! Nilufer LAN Gateway
 interface GigabitEthernet0/2
  description to Nilufer
  ip address 10.16.2.1 255.255.255.0
  no shutdown
  exit
 
-! Static Routes
+! --- Static Route Entries ---
 ip route 10.6.1.0 255.255.255.0 1.1.1.6
 ip route 10.6.2.0 255.255.255.0 1.1.1.6
 ip route 10.19.1.0 255.255.255.0 1.1.1.19
@@ -405,7 +346,7 @@ ip route 10.19.2.0 255.255.255.0 1.1.1.19
 ip route 10.53.1.0 255.255.255.0 1.1.1.53
 ip route 10.53.2.0 255.255.255.0 1.1.1.53
 
-! Security & Management
+! --- Management & Hardening ---
 no ip domain lookup
 enable secret cisco
 ip domain-name cisco
@@ -430,52 +371,179 @@ end
 write memory
 ```
 
+</details>
+
+<details>
+<summary><b>Router 3: Çorum (19)</b></summary>
+
+```cisco
+enable
+configure terminal
+hostname Corum
+
+! --- MPLS WAN Uplink ---
+interface GigabitEthernet0/3/0
+ description to MPLS
+ ip address 1.1.1.19 255.255.255.0
+ no shutdown
+ exit
+
+! --- District LAN Gateways ---
+interface GigabitEthernet0/1
+ description to Alaca
+ ip address 10.19.1.1 255.255.255.0
+ no shutdown
+ exit
+
+interface GigabitEthernet0/2
+ description to Iskilip
+ ip address 10.19.2.1 255.255.255.0
+ no shutdown
+ exit
+
+! --- Static Route Entries ---
+ip route 10.6.1.0 255.255.255.0 1.1.1.6
+ip route 10.6.2.0 255.255.255.0 1.1.1.6
+ip route 10.53.1.0 255.255.255.0 1.1.1.53
+ip route 10.53.2.0 255.255.255.0 1.1.1.53
+ip route 10.16.1.0 255.255.255.0 1.1.1.16
+ip route 10.16.2.0 255.255.255.0 1.1.1.16
+
+! --- Management & Hardening ---
+no ip domain lookup
+enable secret cisco
+ip domain-name cisco
+service password-encryption
+crypto key generate rsa
+1024
+username admin privilege 15 secret admin
+username user privilege 1 secret user
+line vty 0 4
+ logging synchronous
+ login local
+ transport input all
+ exit
+ip ssh version 2
+ip ssh authentication-retries 4
+ip ssh time-out 30
+line console 0
+ logging synchronous
+ login local
+ exit
+end
+write memory
+```
+
+</details>
+
+<details>
+<summary><b>Router 4: Rize (53)</b></summary>
+
+```cisco
+enable
+configure terminal
+hostname Rize
+
+! --- MPLS WAN Uplink ---
+interface GigabitEthernet0/3/0
+ description to MPLS
+ ip address 1.1.1.53 255.255.255.0
+ no shutdown
+ exit
+
+! --- District LAN Gateways ---
+interface GigabitEthernet0/1
+ description to Pazar
+ ip address 10.53.1.1 255.255.255.0
+ no shutdown
+ exit
+
+interface GigabitEthernet0/2
+ description to Ikizdere
+ ip address 10.53.2.1 255.255.255.0
+ no shutdown
+ exit
+
+! --- Static Route Entries ---
+ip route 10.6.1.0 255.255.255.0 1.1.1.6
+ip route 10.6.2.0 255.255.255.0 1.1.1.6
+ip route 10.19.1.0 255.255.255.0 1.1.1.19
+ip route 10.19.2.0 255.255.255.0 1.1.1.19
+ip route 10.16.1.0 255.255.255.0 1.1.1.16
+ip route 10.16.2.0 255.255.255.0 1.1.1.16
+
+! --- Management & Hardening ---
+no ip domain lookup
+enable secret cisco
+ip domain-name cisco
+service password-encryption
+crypto key generate rsa
+1024
+username admin privilege 15 secret admin
+username user privilege 1 secret user
+line vty 0 4
+ logging synchronous
+ login local
+ transport input all
+ exit
+ip ssh version 2
+ip ssh authentication-retries 4
+ip ssh time-out 30
+line console 0
+ logging synchronous
+ login local
+ exit
+end
+write memory
+```
+
+</details>
+
 ---
 
-## Verification and Diagnostics
+## Verification & Diagnostics Guide
 
 ### 1. Interface Operational Status
-Verify interface status on each router:
 ```cisco
 Ankara# show ip interface brief
 Corum# show ip interface brief
 Rize# show ip interface brief
 Bursa# show ip interface brief
 ```
-Confirm all interfaces display `Status: up` and `Protocol: up`.
+Verify that all connected interfaces show `Status: up` and `Protocol: up`.
 
-### 2. Routing Table Verification
-Check that connected (`C`), local (`L`), and static (`S`) routes appear correctly:
+### 2. Static Routing Verification
 ```cisco
 Ankara# show ip route static
-Corum# show ip route static
-Rize# show ip route static
-Bursa# show ip route static
+```
+Expected output displays static routes flagged with `S` pointing across the `1.1.1.x` WAN next-hops:
+```text
+S    10.16.1.0/24 [1/0] via 1.1.1.16
+S    10.16.2.0/24 [1/0] via 1.1.1.16
+S    10.19.1.0/24 [1/0] via 1.1.1.19
+S    10.19.2.0/24 [1/0] via 1.1.1.19
+S    10.53.1.0/24 [1/0] via 1.1.1.53
+S    10.53.2.0/24 [1/0] via 1.1.1.53
 ```
 
-### 3. End-to-End ICMP Connectivity Tests
-Test inter-regional reachability across opposing corners of the network:
+### 3. End-to-End Connectivity (Ping & Traceroute)
 ```cisco
-! From Ankara router to Rize Pazar gateway:
+! Test gateway-to-gateway reachability:
 Ankara# ping 10.53.1.1
 
-! From Bursa router to Corum Iskilip gateway:
-Bursa# ping 10.19.2.1
-
-! From a workstation in Sincan (Ankara) to a host in Nilufer (Bursa):
-PC-Sincan> ping 10.16.2.10
+! Verify multi-hop transit path:
+Ankara# traceroute 10.53.1.1
 ```
 
-### 4. SSH & Telnet Remote Access Verification
-Test secure administrative access from host command prompts:
+### 4. Remote Management Access
 ```bash
-# Connect via SSH as privileged administrator:
+# SSH as administrator (Privilege 15):
 ssh -l admin 1.1.1.6
 
-# Connect via SSH as standard operator:
+# SSH as standard user (Privilege 1):
 ssh -l user 1.1.1.16
 
-# Connect via Telnet:
+# Fallback Telnet session:
 telnet 1.1.1.19
 ```
 
@@ -485,17 +553,18 @@ telnet 1.1.1.19
 
 ```text
 cisco-packet-tracer-4-city-wan-routing/
-├── .gitignore                                # Git ignore file for OS, temp, and Packet Tracer autosaves
-├── LICENSE                                   # MIT Open Source License
-├── README.md                                 # Comprehensive documentation and technical guide
+├── .gitignore                                # Excludes OS, temp, and autosave files
+├── LICENSE                                   # MIT License
+├── README.md                                 # Technical documentation & topology guide
 ├── configs/
-│   ├── all_routers_config.ios                # Complete consolidated script for all 4 routers
+│   ├── all_routers_config.ios                # Consolidated configuration script for all 4 routers
 │   ├── ankara_router.ios                     # Cisco IOS configuration for Ankara router (06)
 │   ├── bursa_router.ios                      # Cisco IOS configuration for Bursa router (16)
-│   ├── corum_router.ios                      # Cisco IOS configuration for Corum router (19)
+│   ├── corum_router.ios                      # Cisco IOS configuration for Çorum router (19)
 │   └── rize_router.ios                       # Cisco IOS configuration for Rize router (53)
 └── topologies/
-    ├── cisco_4_city_wan_routing.pkt          # Packet Tracer lab topology file
+    ├── network_topology.svg                  # High-resolution vector topology architecture diagram
+    ├── cisco_4_city_wan_routing.pkt          # Cisco Packet Tracer lab topology file
     └── 4_il_wan_static_routing.pkt           # Alternative named copy of the topology
 ```
 
@@ -503,13 +572,13 @@ cisco-packet-tracer-4-city-wan-routing/
 
 ## Instructions for Running the Lab
 
-1. Ensure **Cisco Packet Tracer** (version 8.0 or higher) is installed.
+1. Ensure **Cisco Packet Tracer** (v8.0 or higher) is installed.
 2. Clone this repository:
    ```bash
    git clone https://github.com/EmirEvren/cisco-packet-tracer-4-city-wan-routing.git
    ```
 3. Open `topologies/cisco_4_city_wan_routing.pkt` in Cisco Packet Tracer.
-4. Allow convergence on the switches and routers (link indicators will turn green).
+4. Allow link states to converge (all link lights turn green).
 5. Open any client workstation or router CLI to test connectivity using `ping` and `ssh`.
 
 ---
