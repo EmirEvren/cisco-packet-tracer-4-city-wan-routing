@@ -1,4 +1,4 @@
-﻿# Cisco Packet Tracer - 4-City Intercity WAN Static Routing & Secure Management Lab
+# Cisco Packet Tracer - 4-City Intercity WAN Static Routing & Secure Management Lab
 
 [![Cisco Packet Tracer](https://img.shields.io/badge/Cisco%20Packet%20Tracer-v8.0%2B-049cdb?style=flat-square&logo=cisco&logoColor=white)](https://www.netacad.com/courses/packet-tracer)
 [![Cisco IOS](https://img.shields.io/badge/Cisco%20IOS-15.x%20%2F%2016.x-1BA0D7?style=flat-square&logo=cisco&logoColor=white)](https://www.cisco.com)
@@ -80,49 +80,71 @@ A hands-on enterprise networking laboratory designed, implemented, and verified 
 ### 3. Interactive Mermaid Topology
 
 ```mermaid
-graph TD
-    classDef cloud fill:#0f172a,stroke:#38bdf8,stroke-width:2px,color:#f8fafc,font-weight:bold;
-    classDef router fill:#1e293b,stroke:#0284c7,stroke-width:2px,color:#f8fafc,font-weight:bold;
-    classDef lan fill:#020617,stroke:#475569,stroke-width:1px,color:#cbd5e1;
-
-    WAN(("☁️ Central MPLS Backbone<br/>1.1.1.0/24")):::cloud
-
-    subgraph ANK ["🏛️ Ankara Region (Plate 06)"]
-        R_ANK["Router: Ankara<br/>WAN IP: 1.1.1.6"]:::router
-        LAN_SIN["🏢 Sincan LAN<br/>10.6.1.0/24 (GW: 10.6.1.1)"]:::lan
-        LAN_CAN["🏢 Çankaya LAN<br/>10.6.2.0/24 (GW: 10.6.2.1)"]:::lan
-        R_ANK ---|"Gig0/1"| LAN_SIN
-        R_ANK ---|"Gig0/2"| LAN_CAN
+flowchart TB
+    subgraph WAN_Core ["Central MPLS WAN Backbone: 1.1.1.0/24"]
+        MPLS["Central MPLS WAN Cloud"]
     end
 
-    subgraph BUR ["🏛️ Bursa Region (Plate 16)"]
-        R_BUR["Router: Bursa<br/>WAN IP: 1.1.1.16"]:::router
-        LAN_OSM["🏢 Osmangazi LAN<br/>10.16.1.0/24 (GW: 10.16.1.1)"]:::lan
-        LAN_NIL["🏢 Nilüfer LAN<br/>10.16.2.0/24 (GW: 10.16.2.1)"]:::lan
-        R_BUR ---|"Gig0/1"| LAN_OSM
-        R_BUR ---|"Gig0/2"| LAN_NIL
+    subgraph Ankara_Site ["Ankara Region - Plate 06"]
+        direction TB
+        R_ANK["Router: Ankara<br/>WAN IP: 1.1.1.6"]
+        SW_SIN["Switch: Sincan"]
+        SW_CAN["Switch: Cankaya"]
+        LAN_SIN["Sincan Subnet: 10.6.1.0/24<br/>Gateway: 10.6.1.1"]
+        LAN_CAN["Cankaya Subnet: 10.6.2.0/24<br/>Gateway: 10.6.2.1"]
+
+        R_ANK ---|"Gig0/1<br/>10.6.1.1/24"| SW_SIN
+        R_ANK ---|"Gig0/2<br/>10.6.2.1/24"| SW_CAN
+        SW_SIN --- LAN_SIN
+        SW_CAN --- LAN_CAN
     end
 
-    subgraph COR ["🏛️ Çorum Region (Plate 19)"]
-        R_COR["Router: Corum<br/>WAN IP: 1.1.1.19"]:::router
-        LAN_ALA["🏢 Alaca LAN<br/>10.19.1.0/24 (GW: 10.19.1.1)"]:::lan
-        LAN_ISK["🏢 İskilip LAN<br/>10.19.2.0/24 (GW: 10.19.2.1)"]:::lan
-        R_COR ---|"Gig0/1"| LAN_ALA
-        R_COR ---|"Gig0/2"| LAN_ISK
+    subgraph Bursa_Site ["Bursa Region - Plate 16"]
+        direction TB
+        R_BUR["Router: Bursa<br/>WAN IP: 1.1.1.16"]
+        SW_OSM["Switch: Osmangazi"]
+        SW_NIL["Switch: Nilufer"]
+        LAN_OSM["Osmangazi Subnet: 10.16.1.0/24<br/>Gateway: 10.16.1.1"]
+        LAN_NIL["Nilufer Subnet: 10.16.2.0/24<br/>Gateway: 10.16.2.1"]
+
+        R_BUR ---|"Gig0/1<br/>10.16.1.1/24"| SW_OSM
+        R_BUR ---|"Gig0/2<br/>10.16.2.1/24"| SW_NIL
+        SW_OSM --- LAN_OSM
+        SW_NIL --- LAN_NIL
     end
 
-    subgraph RIZ ["🏛️ Rize Region (Plate 53)"]
-        R_RIZ["Router: Rize<br/>WAN IP: 1.1.1.53"]:::router
-        LAN_PAZ["🏢 Pazar LAN<br/>10.53.1.0/24 (GW: 10.53.1.1)"]:::lan
-        LAN_IKI["🏢 İkizdere LAN<br/>10.53.2.0/24 (GW: 10.53.2.1)"]:::lan
-        R_RIZ ---|"Gig0/1"| LAN_PAZ
-        R_RIZ ---|"Gig0/2"| LAN_IKI
+    subgraph Corum_Site ["Corum Region - Plate 19"]
+        direction TB
+        R_COR["Router: Corum<br/>WAN IP: 1.1.1.19"]
+        SW_ALA["Switch: Alaca"]
+        SW_ISK["Switch: Iskilip"]
+        LAN_ALA["Alaca Subnet: 10.19.1.0/24<br/>Gateway: 10.19.1.1"]
+        LAN_ISK["Iskilip Subnet: 10.19.2.0/24<br/>Gateway: 10.19.2.1"]
+
+        R_COR ---|"Gig0/1<br/>10.19.1.1/24"| SW_ALA
+        R_COR ---|"Gig0/2<br/>10.19.2.1/24"| SW_ISK
+        SW_ALA --- LAN_ALA
+        SW_ISK --- LAN_ISK
     end
 
-    WAN ===|"Gig0/3/0 (1.1.1.6)"| R_ANK
-    WAN ===|"Gig0/3/0 (1.1.1.16)"| R_BUR
-    WAN ===|"Gig0/3/0 (1.1.1.19)"| R_COR
-    WAN ===|"Gig0/3/0 (1.1.1.53)"| R_RIZ
+    subgraph Rize_Site ["Rize Region - Plate 53"]
+        direction TB
+        R_RIZ["Router: Rize<br/>WAN IP: 1.1.1.53"]
+        SW_PAZ["Switch: Pazar"]
+        SW_IKI["Switch: Ikizdere"]
+        LAN_PAZ["Pazar Subnet: 10.53.1.0/24<br/>Gateway: 10.53.1.1"]
+        LAN_IKI["Ikizdere Subnet: 10.53.2.0/24<br/>Gateway: 10.53.2.1"]
+
+        R_RIZ ---|"Gig0/1<br/>10.53.1.1/24"| SW_PAZ
+        R_RIZ ---|"Gig0/2<br/>10.53.2.1/24"| SW_IKI
+        SW_PAZ --- LAN_PAZ
+        SW_IKI --- LAN_IKI
+    end
+
+    MPLS ---|"Gig0/3/0: 1.1.1.6"| R_ANK
+    MPLS ---|"Gig0/3/0: 1.1.1.16"| R_BUR
+    MPLS ---|"Gig0/3/0: 1.1.1.19"| R_COR
+    MPLS ---|"Gig0/3/0: 1.1.1.53"| R_RIZ
 ```
 
 ---
